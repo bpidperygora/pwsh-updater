@@ -18,18 +18,28 @@ function Update-PowerShellPreview {
         $metaData = Invoke-RestMethod -Uri 'https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json'
         Log-Message "Raw PreviewReleaseTag: $($metaData.PreviewReleaseTag)"
 
-        if ($metaData.PreviewReleaseTag -match 'v(\d+\.\d+\.\d+)(-preview\.(\d+))?') {
-            $versionString = $matches[0].Substring(1)  # Remove the leading 'v'
-            $latestPreviewVersion = [System.Version]::new($matches[1])
-            $previewNumber = $matches[3]
-            Log-Message "Parsed latest preview version: $latestPreviewVersion (Preview $previewNumber)"
+        # Updated regex pattern to handle RC versions
+        if ($metaData.PreviewReleaseTag -match 'v(\d+\.\d+\.\d+)(?:-preview\.(\d+)|-(rc)\.(\d+))?') {
+            $baseVersion = $matches[1]
+            $isRC = $matches[3] -eq 'rc'
+            $buildNumber = if ($isRC) { $matches[4] } else { $matches[2] }
+            
+            # Construct version string based on whether it's RC or preview
+            $versionString = if ($isRC) {
+                "$baseVersion-rc.$buildNumber"
+            } else {
+                $baseVersion
+            }
+            
+            $latestPreviewVersion = [System.Version]::new($baseVersion)
+            Log-Message "Parsed latest version: $versionString"
         } else {
             throw "Unable to parse version number from PreviewReleaseTag: $($metaData.PreviewReleaseTag)"
         }
 
         if ($currentVersion -lt $latestPreviewVersion -or 
-            ($currentVersion -eq $latestPreviewVersion -and $PSVersionTable.GitCommitId -notmatch "preview\.$previewNumber")) {
-            Log-Message "A new preview version is available. Proceeding with update."
+            ($currentVersion -eq $latestPreviewVersion -and $PSVersionTable.GitCommitId -notmatch "(?:preview\.$buildNumber|rc\.$buildNumber)")) {
+            Log-Message "A new version is available. Proceeding with update."
 
             # Determine OS and architecture
             $os = if ($IsWindows) { "win" } elseif ($IsLinux) { "linux" } elseif ($IsMacOS) { "osx" } else { throw "Unsupported operating system" }
@@ -40,6 +50,7 @@ function Update-PowerShellPreview {
 
             $fileExtension = if ($IsWindows) { "msi" } elseif ($IsLinux) { "tar.gz" } elseif ($IsMacOS) { "pkg" } else { throw "Unsupported operating system" }
             
+            # Updated download URL construction to include RC version in filename when applicable
             $downloadUrl = "https://github.com/PowerShell/PowerShell/releases/download/$($metaData.PreviewReleaseTag)/PowerShell-$versionString-$os-$arch.$fileExtension"
             $installerPath = Join-Path $env:TEMP "PowerShell-$versionString-$os-$arch.$fileExtension"
 
@@ -77,10 +88,10 @@ function Update-PowerShellPreview {
             }
             Log-Message "Temporary files removed"
 
-            Log-Message "PowerShell Preview has been updated to version $versionString"
+            Log-Message "PowerShell has been updated to version $versionString"
             Log-Message "Please restart your PowerShell session to use the new version."
         } else {
-            Log-Message "PowerShell Preview is already up to date."
+            Log-Message "PowerShell is already up to date."
         }
     }
     catch {
