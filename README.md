@@ -15,9 +15,9 @@ This script automatically updates PowerShell Preview to the latest version on Wi
 
 ## Prerequisites
 
-- PowerShell 6.0 or later installed on your system
+- PowerShell 7.4 or later installed on your system
 - Internet connection
-- Administrator/root privileges
+- Administrator/root privileges (only for the system package installation step)
 
 ## Installation
 
@@ -94,21 +94,28 @@ The script automatically detects your system's architecture and downloads the ap
      Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
      ```
 
-2. **Permission denied error**
+2. **"Script is not signed" error even with RemoteSigned policy**
+   - A script downloaded from the internet carries a "Mark of the Web", so RemoteSigned still requires a signature for it. Unblock the downloaded file once:
+     ```powershell
+     Unblock-File .\Update-PowerShellPreview.ps1
+     ```
+   - Alternatively: right-click the file → Properties → check "Unblock", or run `pwsh -ExecutionPolicy Bypass -File .\Update-PowerShellPreview.ps1`.
+
+3. **Permission denied error**
    - Ensure you're running PowerShell as Administrator (Windows) or using sudo (Linux/macOS).
 
-3. **Download fails**
+4. **Download fails**
    - Check your internet connection.
    - Verify that the PowerShell GitHub repository is accessible from your network.
 
-4. **Installation fails**
+5. **Installation fails**
    - On Windows, ensure you have the necessary permissions to install software.
    - On Linux/macOS, make sure you have sudo privileges.
 
-5. **Unsupported OS error**
+6. **Unsupported OS error**
    - Verify that you're running a supported operating system (Windows, Linux, or macOS).
 
-6. **Log file for debugging**
+7. **Log file for debugging**
    - Check the log file created in your temp directory for more detailed error information.
 
 If you encounter any other issues, please check the PowerShell GitHub repository for known issues or file a new issue if necessary.
